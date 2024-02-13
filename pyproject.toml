@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vlm_eval"
+authors = [
+    {name = "Siddharth Karamcheti", email="skaramcheti@cs.stanford.edu"},
+    {name = "Suraj Nair", email="suraj.nair@tri.global"},
+    {name = "Ashwin Balakrishna", email="ashwin.balakrishna@tri.global"}
+]
+description = "VLM Eval: Benchmark for VLMs, spanning text generation tasks from VQA to Captioning"
+version = "0.0.1"
+readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["machine learning"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "accelerate",
+    "ascii_magic",
+    "draccus @ git+https://github.com/dlwh/draccus",
+    "gradio==3.35.2",
+    "gradio_client==0.2.9",
+    "pydantic",
+    "jsonlines",
+    "jinja2==3.0.3",
+    "llava @ git+https://github.com/suraj-nair-tri/LLaVA",
+    "mosaicml-streaming",
+    "openai",
+    "prismatic @ git+https://github.com/TRI-ML/prismatic-vlms",
+    "pycocotools",
+    "rich",
+    "scikit-image",
+    "salesforce-lavis @ git+https://github.com/siddk/LAVIS",
+    "torch>=2.1.0",
+    "torchvision",
+    "torchaudio",
+    "transformers==4.34.1", ## Pinned to avoid namespace conflict with LLaVa models
+    "webdataset",
+    "pymongo",
+    "spacy==3.7.3"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "gpustat",
+    "ipython",
+    "pre-commit",
+    "ruff",
+]
+
+[project.urls]
+homepage = "https://github.com/TRI-ML/vlm-evaluation"
+repository = "https://github.com/TRI-ML/vlm-evaluation"
+documentation = "https://github.com/TRI-ML/vlm-evaluation"
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["cache"]
+
+[tool.black]
+line-length = 121
+target-version = ["py38", "py39", "py310"]
+preview = true
+
+[tool.ruff]
+line-length = 121
+target-version = "py38"
+select = ["A", "B", "C90", "E", "F", "I", "RUF", "W"]
+ignore = ["B008", "F722"]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["E402", "F401"]
