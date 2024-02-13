@@ -82,6 +82,10 @@ Launch web server:
 
 `python -m vlm_eval.serve.gradio_web_server --controller http://localhost:10000 --model-list-mode reload --share`
 
+Now we can launch an interactive demo corresponding to each of the models we want to chat with. For Prism models, you
+onl need to specify a `model_id`, while for LLaVA and InstructBLIP, you need to additionally specifiy a `model_family`
+and `model_dir`. Note that for each model, a different port must be specified.
+
 Launch interactive demo for Prism 7B Model: 
 
 `python -m scripts.interactive_demo --port 40000 --model_id prism-dinosiglip+7b`
