@@ -64,7 +64,7 @@ If you have multiple GPUs available:
 
 `accelerate launch --num_processes=<NUM_GPUS> scripts/evaluate.py --model_id prism-dinosiglip+7b --dataset.type text-vqa-slim --dataset.root_dir /home/ubuntu/datasets/vlm-evaluation`
 
-You can evaluate any models trained in the accompanying prismatic-vlms codebase by modifying the model_dir, model_family, and model_id above accordingly
+You can evaluate any models trained in the accompanying prismatic-vlms codebase by modifying the `model_dir`, `model_family`, and `model_id` above accordingly.
 
 (3) Score LLaVa 1.5 (7B) Model and Prism 7B on Text VQA
 
