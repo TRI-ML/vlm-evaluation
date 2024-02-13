@@ -128,7 +128,6 @@ High-level overview of repository/project file-tree:
 + `.gitignore` - Default Python `.gitignore`.
 + `.pre-commit-config.yaml` - Pre-commit configuration file (sane defaults + `black` + `ruff`).
 + `LICENSE` - By default, research code is made available under the MIT License; if changing, think carefully about why!
-+ `Makefile` - Top-level Makefile (by default, supports linting - checking & auto-fix); extend as needed.
 + `pyproject.toml` - Following PEP 621, this file has all project configuration details (including dependencies), as
                      well as tool configurations (for `black` and `ruff`).
 + `README.md` - You are here!
