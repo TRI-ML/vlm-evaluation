@@ -72,8 +72,7 @@ You can evaluate any models trained in the accompanying prismatic-vlms codebase 
 
 `python scripts/score.py --model_id prism-dinosiglip+7b --dataset.type text-vqa-slim --dataset.root_dir /home/ubuntu/datasets/vlm-evaluation --results_dir /home/ubuntu/prismatic-vlms/results`
 
-(4) Play with Prism 7B Model in interactive GUI
-Run the following scripts in separate terminals:
+(4) To chat with the LLaVa 1.5 (7B) Model and Prism 7B models in an interactive GUI, run the following scripts in separate terminals.
 
 Launch gradio controller: 
 
