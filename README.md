@@ -35,7 +35,7 @@ a given model on the specified dataset
 
 Interactive GUI: `scripts/interactive_demo.py` loads a trained model and creates a gradio style interactive demo.
 
-Scoring: `scripts/score.py` Score an evaluated model.
+Scoring: `scripts/score.py` scores an evaluated model.
 
 ## Example
 
@@ -48,7 +48,7 @@ First make sure you create the folders for evaluation datasets and results. For 
 
 where `dataset_family` can be selected from `[vqa-v2, gqa, vizwiz, text-vqa, refcoco, ocid-ref, tally-qa, pope, vsr]`
 
-(2) Evaluate LLaVa 1.5 (7B) model and Prism 7B on Text VQA slim dataset:
+(2) Evaluate LLaVa 1.5 (7B) and Prism 7B models on Text VQA slim dataset:
 
 `python scripts/evaluate.py --model_family llava-v15 --model_id llava-v1.5-7b --model_dir liuhaotian/llava-v1.5-7b --dataset.type text-vqa-slim --dataset.root_dir /home/ubuntu/datasets/vlm-evaluation`
 
@@ -66,13 +66,13 @@ If you have multiple GPUs available:
 
 You can evaluate any models trained in the accompanying prismatic-vlms codebase by modifying the `model_dir`, `model_family`, and `model_id` above accordingly.
 
-(3) Score LLaVa 1.5 (7B) Model and Prism 7B on Text VQA
+(3) Score LLaVa 1.5 (7B) and Prism 7B models on Text VQA
 
 `python scripts/score.py --model_id llava-v1.5-7b --dataset.type text-vqa-slim --dataset.root_dir /home/ubuntu/datasets/vlm-evaluation --results_dir /home/ubuntu/prismatic-vlms/results`
 
 `python scripts/score.py --model_id prism-dinosiglip+7b --dataset.type text-vqa-slim --dataset.root_dir /home/ubuntu/datasets/vlm-evaluation --results_dir /home/ubuntu/prismatic-vlms/results`
 
-(4) To chat with the LLaVa 1.5 (7B) Model and Prism 7B models in an interactive GUI, run the following scripts in separate terminals.
+(4) To chat with the LLaVa 1.5 (7B) and Prism 7B models in an interactive GUI, run the following scripts in separate terminals.
 
 Launch gradio controller: 
 
