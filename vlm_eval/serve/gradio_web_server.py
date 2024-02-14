@@ -244,8 +244,8 @@ def http_bot(state, model_selector, interaction_mode, temperature, max_new_token
 
 title_markdown = """
 # Prismatic VLMs: Investigating the Design Space of Visually-Conditioned Language Models
-[[[Training Code](github.com/TRI-ML/prismatic-vlms)]
-[[[Evaluation Code](github.com/TRI-ML/vlm-evaluation)]
+[[Training Code](github.com/TRI-ML/prismatic-vlms)]
+[[Evaluation Code](github.com/TRI-ML/vlm-evaluation)]
 | 📚 [[Paper](https://arxiv.org/abs/2402.07865)]
 """
 

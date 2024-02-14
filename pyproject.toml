@@ -35,7 +35,7 @@ dependencies = [
     "draccus @ git+https://github.com/dlwh/draccus",
     "gradio==3.35.2",
     "gradio_client==0.2.9",
-    "pydantic",
+    "pydantic==1.10.14",
     "jsonlines",
     "jinja2==3.0.3",
     "llava @ git+https://github.com/suraj-nair-tri/LLaVA",
