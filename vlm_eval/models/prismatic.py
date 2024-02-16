@@ -48,6 +48,8 @@ class PrismaticVLM(VLM):
     def load(self) -> Tuple[nn.Module, Tokenizer, ImageProcessor]:
         """Load a Prismatic/Quartz Model using the default `prisma.load_pretrained_vlm` initializer."""
 
+        print(f"loading prismatic {self}")
+
         if self.run_dir is not None:
             load_from = self.run_dir
         elif self.model_id is not None:
