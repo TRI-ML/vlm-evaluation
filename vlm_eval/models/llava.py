@@ -74,7 +74,9 @@ class LLaVa(VLM):
         temperature: float = 0.2,
         **_: str,
     ) -> None:
-        self.model_family, self.model_id, self.hub_path = model_family, model_id, run_dir
+        self.model_family, self.model_id = model_family, model_id
+        self.hub_path = LLAVA_MODELS[model_id] if model_id in LLAVA_MODELS else run_dir
+        
         self.dtype = {"fp32": torch.float32, "fp16": torch.float16, "bf16": torch.bfloat16}[load_precision]
         self.ocr = ocr
 
