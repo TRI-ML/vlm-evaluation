@@ -348,7 +348,7 @@ class AI2DFullDatasetConfig(DatasetConfig):
     expected_examples: int = 15501
 
     root_dir: Path = Path("../../datasets/vlm-evaluation")
-    index_file: Path = Path("datasets/ai2d/metadata.json")
+    index_file: Path = Path("datasets/ai2d/metadata-full.json")
     annotations_file: Path = Path("datasets/ai2d/metadata-full.json")
 
 
@@ -363,7 +363,6 @@ class AI2DSlimDatasetConfig(DatasetConfig):
     root_dir: Path = Path("../../datasets/vlm-evaluation")
     index_file: Path = Path("datasets/ai2d/metadata-slim-1024.json")
     annotations_file: Path = Path("datasets/ai2d/metadata-slim-1024.json")
-
 
 
 # === Define a Dataset Registry Enum for Reference / Validation =>> all *new* datasets must be added here! ===

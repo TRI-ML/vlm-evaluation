@@ -308,14 +308,10 @@ class LLaVa(VLM):
         # Conversation manager `self.conv` is not stateless! Need to reset on each construction!
         self.conv = conv_templates[self.conv_mode].copy()
 
-        # Create Choice String
-        assert len(choices) <= 26, "Too many answer choices vs. possible letters in the alphabet!"
-        choice_str = "\n".join([f"{chr(ord('A') + idx)}. {choice}" for idx, choice in enumerate(choices)])
-
         # Different LLaVa Models handle <IMAGE> token insertion differently; we support both LLaVa v1 and v1.5!
         #   => Ref (v1): https://github.com/haotian-liu/LLaVA/blob/main/llava/eval/model_vqa_science.py#L53
         #   => Ref (v1.5): https://github.com/haotian-liu/LLaVA/blob/main/docs/Evaluation.md#evaluate-on-custom-datasets
-        q_prompt = DEFAULT_IMAGE_TOKEN + "\n" + "{question}\n" + choice_str
+        q_prompt = DEFAULT_IMAGE_TOKEN + "\n" + "{question}\n{choice_str}"
         if self.model_id.startswith("llava-v1.5"):
             q_prompt += "\nAnswer with the option's letter from the given choices directly."
 
@@ -326,8 +322,11 @@ class LLaVa(VLM):
         # Get full chat prompt template function --> insert question with `template.format(question=<QUESTION>)`
         prompt_template = self.conv.get_prompt()
 
-        def llava_mc_prompt_fn(question: str) -> str:
-            return prompt_template.format(question=question)
+        def llava_mc_prompt_fn(question: str, choices: List[str]) -> str:
+            assert len(choices) <= 26, "Too many answer choices vs. possible letters in the alphabet!"
+            choice_str = "\n".join([f"{chr(ord('A') + idx)}. {choice}" for idx, choice in enumerate(choices)])
+
+            return prompt_template.format(question=question, choice_str=choice_str)
 
         return llava_mc_prompt_fn
 
