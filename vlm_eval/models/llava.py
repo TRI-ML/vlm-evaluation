@@ -179,7 +179,8 @@ class LLaVa(VLM):
         bbox_refer_prompt_fn = self.get_bbox_refer_chat_prompt_fn()
         text_vqa_prompt_fn = self.get_vqa_chat_prompt_fn(uncertainty_aware=False)
         captioning_prompt_fn = self.get_captioning_prompt_fn()
-        tally_qa_prompt_fn = self.get_mc_prompt_fn(choices=[str(i) for i in range(16)])
+        tally_qa_prompt_fn = self.get_mc_prompt_fn()
+        ai2d_prompt_fn = self.get_mc_prompt_fn()
 
         return {
             "vqa-v2": vqa_prompt_fn,
@@ -191,6 +192,7 @@ class LLaVa(VLM):
             "tally-qa": tally_qa_prompt_fn,
             "refcoco": bbox_refer_prompt_fn,
             "ocid-ref": bbox_refer_prompt_fn,
+            "ai2d": ai2d_prompt_fn,
             # Generic for GUI
             "captioning": captioning_prompt_fn,
             "bbox_pred": bbox_refer_prompt_fn,
@@ -300,7 +302,7 @@ class LLaVa(VLM):
 
         return llava_contrast_caption_prompt_fn
 
-    def get_mc_prompt_fn(self, choices: List[str]) -> Callable[[str], str]:
+    def get_mc_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a multiple-choice question-answer task."""
 
         # Conversation manager `self.conv` is not stateless! Need to reset on each construction!

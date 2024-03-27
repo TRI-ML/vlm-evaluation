@@ -432,5 +432,42 @@ DATASET_REGISTRY: Dict[str, Dict] = {
         },
     },
 
+    "ai2d": {
+        "dataset_type": EvaluationDatasetType.multiple_choice,
+        "download": [
+            {
+                "name": "val_qa",
+                "extract": True,
+                "extract_type": "directory",
+                "url": "http://ai2-website.s3.amazonaws.com/data/ai2d-all.zip",
+                "do_rename": True,
+            },
+            {
+                "name": "test_ids",
+                "extract": False,
+                "extract_type": "file",
+                "url": "https://s3-us-east-2.amazonaws.com/prior-datasets/ai2d_test_ids.csv",
+                "do_rename": False,
+            },
+        ],
+        "paths": {
+            # Raw Downloaded Data --> derived from the extraction parameters/names above (redundant, but hackable)
+            "download_dir": Path("download/ai2d"),
+            "questions_answers": Path("download/ai2d/val_qa/questions"),
+            "images": Path("download/ai2d/val_qa/images"),
+            "test_ids": Path("download/ai2d/ai2d_test_ids.csv"),
+
+            # Dataset Directory --> stores index / metadata JSON file(s) for full and "slim" datasets
+            #   Each `metadata-*.json` file is a complete, single source of truth for dataset initialization
+            "dataset_dir": Path("datasets/ai2d"),
+            "index_files": [
+                Path("datasets/ai2d/metadata.json"),
+                Path("datasets/ai2d/metadata-slim-512.json"),
+                Path("datasets/ai2d/metadata-slim-1024.json"),
+                Path("datasets/ai2d/metadata-slim-2048.json"),
+            ],
+        }
+    },
+
 }
 # fmt: on
