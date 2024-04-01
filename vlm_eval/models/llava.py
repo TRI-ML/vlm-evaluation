@@ -166,6 +166,7 @@ class LLaVa(VLM):
         model, vision_tower = model.to(self.distributed_state.device), vision_tower.to(self.distributed_state.device)
         model.eval()
 
+        print(f"loaded llava {self.model_id}")
         return model, tokenizer, image_processor
 
     def set_generate_kwargs(self, generate_kwargs):
