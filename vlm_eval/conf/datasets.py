@@ -112,7 +112,7 @@ class VizWizFullDatasetConfig(DatasetConfig):
     root_dir: Path = Path("../../datasets/vlm-evaluation")
     index_file: Path = Path("datasets/vizwiz/metadata.json")
     annotations_file: Path = Path("datasets/vizwiz/annotations-vizwiz-full.json")
-    questions_file: Path = Path("datasets/vqa-v2/questions-vizwiz-full.json")
+    questions_file: Path = Path("datasets/vizwiz/questions-vizwiz-full.json")
 
 
 @dataclass
@@ -338,6 +338,32 @@ class PopeSlimDatasetConfig(DatasetConfig):
     expected_examples: int = 3072
 
 
+# === AI2D Datasets =>> Note: "Slim" defaults to k = 1024 examples ===
+@dataclass
+class AI2DFullDatasetConfig(DatasetConfig):
+    dataset_family: str = "ai2d"
+    dataset_id: str = "ai2d-full"
+    split: str = "eval"
+
+    expected_examples: int = 15501
+
+    root_dir: Path = Path("../../datasets/vlm-evaluation")
+    index_file: Path = Path("datasets/ai2d/metadata-full.json")
+    annotations_file: Path = Path("datasets/ai2d/metadata-full.json")
+
+
+@dataclass
+class AI2DSlimDatasetConfig(DatasetConfig):
+    dataset_family: str = "ai2d"
+    dataset_id: str = "ai2d-slim"
+    split: str = "eval"
+
+    expected_examples: int = 2048
+
+    root_dir: Path = Path("../../datasets/vlm-evaluation")
+    index_file: Path = Path("datasets/ai2d/metadata-slim-1024.json")
+    annotations_file: Path = Path("datasets/ai2d/metadata-slim-1024.json")
+
 
 # === Define a Dataset Registry Enum for Reference / Validation =>> all *new* datasets must be added here! ===
 @unique
@@ -383,6 +409,10 @@ class DatasetRegistry(Enum):
     TALLYQA_FULL = TallyQAFullDatasetConfig
     TALLYQA_SUBSAMPLED = TallyQASubsampledDatasetConfig
     TALLYQA_SLIM = TallyQASlimDatasetConfig
+
+    # AI2D
+    AI2D_FULL = AI2DFullDatasetConfig
+    AI2D_SLIM = AI2DSlimDatasetConfig
 
     @property
     def dataset_id(self) -> str:

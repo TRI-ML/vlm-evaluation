@@ -18,6 +18,7 @@ from vlm_eval.tasks.harnesses.textvqa import TextVQAIndexDataset, build_textvqa_
 from vlm_eval.tasks.harnesses.vizwiz import VizWizIndexDataset, build_vizwiz_indices
 from vlm_eval.tasks.harnesses.vqav2 import VQAv2IndexDataset, build_vqav2_indices
 from vlm_eval.tasks.harnesses.vsr import VSRIndexDataset, build_vsr_indices
+from vlm_eval.tasks.harnesses.ai2d import AI2DIndexDataset, build_ai2d_indices
 
 # Initialize Overwatch =>> Wraps `logging.Logger`
 overwatch = initialize_overwatch(__name__)
@@ -37,6 +38,7 @@ BUILDER_DISPATCH: Dict[str, Dict[str, Callable]] = {
     "refcoco": {"build_indices": build_refcoco_indices, "get_index_datasets": RefCOCOIndexDataset},
     "ocid-ref": {"build_indices": build_ocidref_indices, "get_index_datasets": OCIDRefIndexDataset},
     "tally-qa": {"build_indices": build_tallyqa_indices, "get_index_datasets": TallyQAIndexDataset},
+    "ai2d": {"build_indices": build_ai2d_indices, "get_index_datasets": AI2DIndexDataset},
 
     # fmt: on
 }

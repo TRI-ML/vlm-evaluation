@@ -34,18 +34,20 @@ class EvaluationConfig:
 
     # DatasetConfig from `vlm_eval/conf/datasets.py`; override with --dataset.type `DatasetRegistry.<DATASET>.dataset_id`
     dataset: DatasetConfig = field(
-        default_factory=DatasetConfig.get_choice_class(DatasetRegistry.TALLYQA_SUBSAMPLED.dataset_id)
+        default_factory=DatasetConfig.get_choice_class(DatasetRegistry.AI2D_FULL.dataset_id)
     )
 
     # === Model Parameters =>> Prismatic ===
-    model_family: str = "prismatic"                    # Model family to load from in < `prismatic` | `llava-v15` | ... >
-    model_id: Optional[str] = None                   # Model ID to load and run (instance of `model_family`)
-    model_dir: Optional[Path] = None                           # Path to model checkpoint to load --> should be self-contained
+    model_family: str = "prismatic"                 # Model family to load from in < `prismatic` | `llava-v15` | ... >
+    model_id: Optional[str] = (                     # Model ID to load and run (instance of `model_family`)
+        "prism-clip+7b"
+    )
+    model_dir: Optional[Path] = None                # Path to model checkpoint to load --> should be self-contained
 
     # === Model Parameters =>> Official LLaVa ===
     # model_family: str = "llava-v15"
-    # model_id: str = "llava-v1.5-13b"
-    # model_dir: Path = "liuhaotian/llava-v1.5-13b"
+    # model_id: str = "llava-v1.5-7b"
+    # model_dir: Path = "liuhaotian/llava-v1.5-7b"
 
     # === Model Parameters =>> Official InstructBLIP ===
     # model_family: str = "instruct-blip"
@@ -58,7 +60,7 @@ class EvaluationConfig:
 
     # Artifact Parameters
     results_dir: Path = Path(                       # Path to results directory (writing predicted output, metrics)
-        "/home/ubuntu/prismatic-vlms/results"
+        "results"
     )
 
     # HF Hub Credentials (for LLaMa-2)

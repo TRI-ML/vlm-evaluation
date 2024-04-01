@@ -34,14 +34,14 @@ class ScoreConfig:
 
     # DatasetConfig from `vlm_eval/conf/datasets.py`; override with --dataset.type `DatasetRegistry.<DATASET>.dataset_id`
     dataset: DatasetConfig = field(
-        default_factory=DatasetConfig.get_choice_class(DatasetRegistry.TEXTVQA_SLIM.dataset_id)
+        default_factory=DatasetConfig.get_choice_class(DatasetRegistry.AI2D_FULL.dataset_id)
     )
 
     # === Model Parameters =>> Prismatic ===
-    model_id: str = "resize-naive-clip-vit-l-14-336px-no-align-llama2pure+7b+stage-finetune+x7"     # Model ID to load and run (instance of `model_family`)
+    model_id: str = "prism-clip+7b"                 # Model ID to load and run (instance of `model_family`)
 
     # === Model Parameters =>> Official LLaVa ===
-    # model_id: str = "llava-v1.5-13b"
+    # model_id: str = "llava-v1.5-7b"
 
     # === Model Parameters =>> Official InstructBLIP ===
     # model_id: str = "instructblip-vicuna-7b"
@@ -50,7 +50,7 @@ class ScoreConfig:
 
     # Artifact Parameters
     results_dir: Path = Path(                       # Path to results directory (writing predicted output, metrics)
-        "/home/ubuntu/prismatic-vlms/results"
+        "results"
     )
 
     # fmt: on
