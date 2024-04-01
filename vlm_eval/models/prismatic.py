@@ -61,7 +61,7 @@ class PrismaticVLM(VLM):
         vlm = load(load_from, hf_token=self.hf_token)
         vlm.to(self.distributed_state.device, dtype=self.dtype)
 
-        print(f"loaded prismatic {self}")
+        print(f"loaded prismatic {self.model_id}")
 
         # Get Tokenizer and Image Processor
         tokenizer, image_transform = vlm.llm_backbone.tokenizer, vlm.vision_backbone.image_transform
