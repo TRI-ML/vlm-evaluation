@@ -253,10 +253,9 @@ tos_markdown = """
 ### Terms of use
 By using this service, users are required to agree to the following terms:
 The service is a research preview intended for non-commercial use only. It only provides limited safety measures and may
-generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes. The
-service may collect user dialogue data for future research. For an optimal experience,
-please use desktop computers for this demo, as mobile devices may compromise its quality. This website
-is heavily inspired by the website released by [LLaVA](https://github.com/haotian-liu/LLaVA).
+generate offensive content. It must not be used for any illegal, harmful, violent, racist, or sexual purposes. For an optimal experience,
+please use desktop computers for this demo, as mobile devices may compromise its quality. This Gradio application was built off of the Apache-licensed 
+Gradio code released by the LLaVa authors, with light modifications.
 """
 
 

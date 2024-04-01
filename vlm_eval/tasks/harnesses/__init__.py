@@ -12,6 +12,7 @@ from .textvqa import TextVQAScorer, TextVQATaskRunner
 from .vizwiz import VizWizScorer, VizWizTaskRunner
 from .vqav2 import VQAv2Scorer, VQAv2TaskRunner
 from .vsr import VSRScorer, VSRTaskRunner
+from .ai2d import AI2DScorer, AI2DTaskRunner
 
 
 # === Protocol Definitions ===
@@ -36,6 +37,7 @@ DATASET2RUNNER = {
     "tally-qa": TallyQATaskRunner,
     "refcoco": RefCOCOTaskRunner,
     "ocid-ref": OCIDRefTaskRunner,
+    "ai2d": AI2DTaskRunner,
 }
 
 # === Score Function Dispatch by Dataset Family ===
@@ -49,6 +51,7 @@ DATASET2SCORER = {
     "tally-qa": TallyQAScorer,
     "refcoco": RefCOCOScorer,
     "ocid-ref": OCIDRefScorer,
+    "ai2d": AI2DScorer,
 }
 
 

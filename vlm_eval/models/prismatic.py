@@ -79,7 +79,8 @@ class PrismaticVLM(VLM):
         bbox_refer_prompt_fn = self.get_bbox_refer_chat_prompt_fn()
         text_vqa_prompt_fn = self.get_vqa_chat_prompt_fn(uncertainty_aware=False)
         captioning_prompt_fn = self.get_captioning_prompt_fn()
-        tally_qa_prompt_fn = self.get_mc_prompt_fn(choices=[str(i) for i in range(16)])
+        tally_qa_prompt_fn = self.get_mc_prompt_fn()
+        ai2d_prompt_fn = self.get_mc_prompt_fn()
 
         return {
             "vqa-v2": vqa_prompt_fn,
@@ -91,6 +92,7 @@ class PrismaticVLM(VLM):
             "tally-qa": tally_qa_prompt_fn,
             "refcoco": bbox_refer_prompt_fn,
             "ocid-ref": bbox_refer_prompt_fn,
+            "ai2d": ai2d_prompt_fn,
             # Generic for GUI
             "captioning": captioning_prompt_fn,
             "bbox_pred": bbox_refer_prompt_fn,
@@ -173,15 +175,15 @@ class PrismaticVLM(VLM):
 
         return contrast_caption_prompt_fn
 
-    def get_mc_prompt_fn(self, choices: List[str]) -> Callable[[str], str]:
+    def get_mc_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a multiple choice question-answering task."""
         prompt_builder_fn = self.model.get_prompt_builder
 
-        # Create Choice String
-        assert len(choices) <= 26, "Too many answer choices vs. possible letters in the alphabet!"
-        choice_str = "\n".join([f"{chr(ord('A') + idx)}. {choice}" for idx, choice in enumerate(choices)])
+        def mc_prompt_fn(question: str, choices: List[str]) -> str:
+            # Create Choice String
+            assert len(choices) <= 26, "Too many answer choices vs. possible letters in the alphabet!"
+            choice_str = "\n".join([f"{chr(ord('A') + idx)}. {choice}" for idx, choice in enumerate(choices)])
 
-        def mc_prompt_fn(question: str) -> str:
             # Use Default Prompt (same as LLaVa-v1.5)
             prompt_builder = prompt_builder_fn()
             q_prompt = f"\n{question}\n{choice_str}"
