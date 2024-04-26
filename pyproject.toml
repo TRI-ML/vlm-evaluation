@@ -52,7 +52,7 @@ dependencies = [
     "transformers==4.34.1", ## Pinned to avoid namespace conflict with LLaVa models
     "webdataset",
     "pymongo",
-    "spacy==3.7.3"
+    "spacy"
 ]
 
 [project.optional-dependencies]
