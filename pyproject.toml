@@ -33,7 +33,7 @@ dependencies = [
     "accelerate",
     "ascii_magic",
     "draccus @ git+https://github.com/dlwh/draccus",
-    "gradio,
+    "gradio",
     "gradio_client",
     "pydantic==1.10.14",
     "jsonlines",
