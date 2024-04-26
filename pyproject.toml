@@ -37,7 +37,7 @@ dependencies = [
     "gradio_client",
     "pydantic==1.10.14",
     "jsonlines",
-    "jinja2==3.0.3",
+    "jinja2",
     "llava @ git+https://github.com/suraj-nair-tri/LLaVA",
     "mosaicml-streaming",
     "openai",
