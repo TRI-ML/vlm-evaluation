@@ -57,9 +57,10 @@ class InstructBLIP(VLM):
         #     "temperature": 1,
         # }
 
-        # For computing likelihoods --> get tokens corresponding to "true", "false" and "yes", "no"
+        # For computing likelihoods --> get tokens corresponding to "true", "false" and "yes", "no" for T/F questions
+        # and also the lower-case alphabet for MC questions
         self.string2idx = {}
-        for trigger_string in ["true", "false", "yes", "no"]:
+        for trigger_string in ["true", "false", "yes", "no"] + [f"{chr(ord('a') + idx)}" for idx in range(26)]:
             token_idx_list = self.text_img_processor.tokenizer.encode(trigger_string, add_special_tokens=False)
             assert len(token_idx_list) == 1, f'String "{trigger_string}" is tokenized as more than one token!'
             self.string2idx[trigger_string] = token_idx_list[0]
@@ -93,6 +94,8 @@ class InstructBLIP(VLM):
         bbox_refer_prompt_fn = self.get_bbox_refer_chat_prompt_fn()
         text_vqa_prompt_fn = self.get_vqa_chat_prompt_fn(uncertainty_aware=False, ocr_handling=True)
         captioning_prompt_fn = self.get_captioning_prompt_fn()
+        tally_qa_prompt_fn = self.get_mc_prompt_fn()
+        ai2d_prompt_fn = self.get_mc_prompt_fn()
 
         return {
             "vqa-v2": vqa_prompt_fn,
@@ -103,6 +106,7 @@ class InstructBLIP(VLM):
             "pope": vqa_prompt_fn,
             "refcoco": bbox_refer_prompt_fn,
             "ocid-ref": bbox_refer_prompt_fn,
+            "ai2d": ai2d_prompt_fn,
             # Generic for GUI
             "captioning": captioning_prompt_fn,
             "bbox_pred": bbox_refer_prompt_fn,
@@ -153,6 +157,20 @@ class InstructBLIP(VLM):
             return f'Does the following caption match the image (true or false)? Caption: "{caption}" Answer:'
 
         return contrast_caption_prompt_fn
+
+    @staticmethod
+    def get_mc_prompt_fn() -> Callable[[str], str]:
+        """Generates the full reference prompt for a multiple-choice question-answer task."""
+
+        def mc_prompt_fn(question: str, choices: List[str]) -> str:
+            # Create Choice String
+            assert len(choices) <= 26, "Too many answer choices vs. possible letters in the alphabet!"
+            choice_str = "\n".join([f"{chr(ord('A') + idx)}. {choice}" for idx, choice in enumerate(choices)])
+            q_prompt = "{}\n{}".format(question, choice_str)
+            q_prompt += "\nAnswer with the option's letter from the given choices directly."
+            return q_prompt
+
+        return mc_prompt_fn
 
     @staticmethod
     def get_bbox_refer_chat_prompt_fn() -> Callable[[str], str]:
