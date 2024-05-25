@@ -15,7 +15,12 @@ from transformers import InstructBlipForConditionalGeneration, InstructBlipProce
 from vlm_eval.util.interfaces import VLM, ImageProcessor, Tokenizer
 
 # Define InstructBLIP Mapping from Model ID --> HF Hub Path
-INSTRUCTBLIP_MODELS = {"instructblip-vicuna-7b": "Salesforce/instructblip-vicuna-7b"}
+INSTRUCTBLIP_MODELS = {
+    # fmt: off
+    "instructblip-vicuna-7b": "Salesforce/instructblip-vicuna-7b",
+    "instructblip-vicuna-13b": "Salesforce/instructblip-vicuna-13b",
+    # fmt: on
+}
 
 
 class InstructBLIP(VLM):
