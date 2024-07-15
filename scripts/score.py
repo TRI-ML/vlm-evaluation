@@ -56,8 +56,7 @@ class ScoreConfig:
     # fmt: on
 
 
-@draccus.wrap()
-def score(cfg: ScoreConfig) -> None:
+def score_after_parse(cfg):
     overwatch.info(f"Starting Official Scoring for Dataset `{cfg.dataset.dataset_id}` => Model `{cfg.model_id}`")
 
     # Short-Circuit (if results/metrics already exist)
@@ -140,6 +139,10 @@ def score(cfg: ScoreConfig) -> None:
     with open(metrics_json, "w") as f:
         json.dump(metrics, f, indent=2)
 
+
+@draccus.wrap()
+def score(cfg: ScoreConfig) -> None:
+    score_after_parse(cfg)
 
 if __name__ == "__main__":
     score()
