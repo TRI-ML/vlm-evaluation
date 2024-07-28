@@ -15,6 +15,8 @@
 #     python ../vlm-evaluation/scripts/score.py --model_id $model_id --dataset.type $task --dataset.root_dir /datasets/prismatic-vlms/vlm-evaluation/ --results_dir results
 # done
 import os
+import subprocess
+import json
 import argparse
 import draccus
 from dataclasses import dataclass, field
@@ -90,7 +92,26 @@ def main(cfg: EvalRunnerConfig):
 
     vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
 
+    # Get existing scores
+    aggregated_scores = {}
+    aggreated_path = os.path.join(cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
+    aggreated_path_remote = os.path.join(cfg.remote_sync, cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
+    cmd = f"aws s3 cp {aggreated_path_remote} -"
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    if len(stdout) > 0:
+        aggregated_scores = json.loads(stdout)
+    else:
+        aggregated_scores = {"model": cfg.model_id}
+
     for dataset in datasets:
+        task_name_full = dataset.dataset_id
+        task_name_short = task_name_full[:-5]
+        aggregated_name = f"{task_name_short}_{task_name_full}"
+        if aggregated_name in aggregated_scores:
+            print(f"{aggregated_name} in {aggreated_path}! Skipping.")
+            continue
+
         cfg.dataset = dataset
         cfg.dataset.root_dir = Path(cfg.dataset_dir)
         print(f"Now evaluating: {dataset.dataset_id}")
@@ -114,9 +135,27 @@ def main(cfg: EvalRunnerConfig):
                 os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id),
             )
             if result:
-                print("Final remote sync successful.")
+                print(f"{task_name_short} remote sync successful.")
             else:
-                print("Final remote sync failed.")
+                print(f"{task_name_short} remote sync failed.")
+            
+            # Updated aggregated scores
+            cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, "metrics.json")} -"
+            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = proc.communicate()
+            curr_results = json.loads(stdout)
+            aggregated_scores[aggregated_name] = curr_results["summary"]
+            with open(aggreated_path, 'w') as f:
+                json.dump(aggregated_scores, f, indent=4)
+            result = remote_sync_with_expon_backoff(
+                cfg.remote_sync_frequency,
+                aggreated_path,
+                aggreated_path_remote,
+            )
+            if result:
+                print("aggregate remote sync successful.")
+            else:
+                print("aggregate remote sync failed.")
 
 
 if __name__=="__main__":
