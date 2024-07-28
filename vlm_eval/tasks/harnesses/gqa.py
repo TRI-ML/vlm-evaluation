@@ -291,8 +291,11 @@ class GQAScorer:
         pfile = self.task_results_dir / "gqa-formatted-predictions.json"
 
         # Run Official Evaluation Script
+        vlm_eval_path = "vlm_eval"
+        if "vlm_eval" not in os.listdir():
+            vlm_eval_path = f"vlm-evaluation/{vlm_eval_path}"
         output = subprocess.run(
-            f"python vlm_eval/util/evaluation/gqa/eval.py --tier {self.split} --questions {qfile} --predictions {pfile}",
+            f"python {vlm_eval_path}/util/evaluation/gqa/eval.py --tier {self.split} --questions {qfile} --predictions {pfile}",
             capture_output=True,
             check=True,
             shell=True,
