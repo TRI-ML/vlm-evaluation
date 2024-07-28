@@ -31,7 +31,7 @@ from vlm_eval.conf.datasets import DatasetConfig, DatasetRegistry
 from scripts.evaluate import EvaluationConfig, evaluate_after_parse
 from scripts.score import ScoreConfig, score_after_parse
 
-TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full", "pope-full"]
+TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full"]
 
 @dataclass
 class EvalRunnerConfig:
@@ -140,7 +140,7 @@ def main(cfg: EvalRunnerConfig):
                 print(f"{task_name_short} remote sync failed.")
             
             # Updated aggregated scores
-            cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, "metrics.json")} -"
+            cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, 'metrics.json')} -"
             proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
