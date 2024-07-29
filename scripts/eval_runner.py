@@ -142,7 +142,7 @@ def main(cfg: EvalRunnerConfig):
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
             aggregated_scores[aggregated_name] = curr_results["summary"]
-            os.mkdir(os.path.join(cfg.results_dir, "aggregated"), exist_ok=True)
+            os.makedirs(os.path.join(cfg.results_dir, "aggregated"), exist_ok=True)
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
             cmd = f"aws s3 cp {aggregated_path} {aggregated_path_remote}"
