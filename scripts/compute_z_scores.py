@@ -56,8 +56,7 @@ def main(cfg: AnalyzeEvalsConfig):
 
   filepath2results = {} # dict mapping filepaths to results to update results later with normalized z score.
 
-  import pdb; pdb.set_trace()
-  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
+g  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
     with open(filepath, 'r') as file:
       results_json = json.load(file)
       filepath2results[filepath] = results_json
