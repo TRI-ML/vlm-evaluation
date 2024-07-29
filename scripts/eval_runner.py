@@ -94,9 +94,9 @@ def main(cfg: EvalRunnerConfig):
 
     # Get existing scores
     aggregated_scores = {}
-    aggreated_path = os.path.join(cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
-    aggreated_path_remote = os.path.join(cfg.remote_sync, cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
-    cmd = f"aws s3 cp {aggreated_path_remote} -"
+    aggregated_path = os.path.join(cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
+    aggregated_path_remote = os.path.join(cfg.remote_sync, cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
+    cmd = f"aws s3 cp {aggregated_path_remote} -"
     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = proc.communicate()
     if len(stdout) > 0:
@@ -109,7 +109,7 @@ def main(cfg: EvalRunnerConfig):
         task_name_short = task_name_full[:-5]
         aggregated_name = f"{task_name_short}_{task_name_full}"
         if aggregated_name in aggregated_scores:
-            print(f"{aggregated_name} in {aggreated_path}! Skipping.")
+            print(f"{aggregated_name} in {aggregated_path}! Skipping.")
             continue
 
         cfg.dataset = dataset
@@ -145,12 +145,13 @@ def main(cfg: EvalRunnerConfig):
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
             aggregated_scores[aggregated_name] = curr_results["summary"]
-            with open(aggreated_path, 'w') as f:
+            os.mkdirs(os.path.join(cfg.results_dir, "aggregated"))
+            with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
             result = remote_sync_with_expon_backoff(
                 cfg.remote_sync_frequency,
-                aggreated_path,
-                aggreated_path_remote,
+                aggregated_path,
+                aggregated_path_remote,
             )
             if result:
                 print("aggregate remote sync successful.")
