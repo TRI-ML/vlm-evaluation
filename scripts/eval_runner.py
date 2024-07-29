@@ -19,6 +19,7 @@ import subprocess
 import json
 import argparse
 import draccus
+import torch
 from dataclasses import dataclass, field
 from accelerate.utils import set_seed
 from pathlib import Path
@@ -129,15 +130,12 @@ def main(cfg: EvalRunnerConfig):
             print(f"Syncing results to {os.path.join(cfg.remote_sync, cfg.results_dir)}:")
             task_name_full = dataset.dataset_id
             task_name_short = task_name_full[:-5]
-            result = remote_sync_with_expon_backoff(
-                cfg.remote_sync_frequency,
-                os.path.join(cfg.results_dir, task_name_short, task_name_full, cfg.model_id),
-                os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id),
-            )
-            if result:
-                print(f"{task_name_short} remote sync successful.")
-            else:
-                print(f"{task_name_short} remote sync failed.")
+
+            local_results_path = os.path.join(cfg.results_dir, task_name_short, task_name_full, cfg.model_id)
+            s3_results_path = os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id)
+            cmd = f"aws s3 cp {local_results_path} {s3_results_path} --recursive"
+            proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print(f"{task_name_short} remote sync finished.")
             
             # Updated aggregated scores
             cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, 'metrics.json')} -"
@@ -148,15 +146,11 @@ def main(cfg: EvalRunnerConfig):
             os.mkdir(os.path.join(cfg.results_dir, "aggregated"))
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
-            result = remote_sync_with_expon_backoff(
-                cfg.remote_sync_frequency,
-                aggregated_path,
-                aggregated_path_remote,
-            )
-            if result:
-                print("aggregate remote sync successful.")
-            else:
-                print("aggregate remote sync failed.")
+            cmd = f"aws s3 cp {aggregated_path} {aggregated_path_remote}"
+            proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("aggregate remote sync finished.")
+
+        torch.distributed.barrier()
 
 
 if __name__=="__main__":
