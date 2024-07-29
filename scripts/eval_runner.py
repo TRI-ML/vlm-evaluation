@@ -26,7 +26,6 @@ from pathlib import Path
 from typing import Union, Optional
 
 from prismatic.util.distributed_utils import world_info_from_env
-from prismatic.util.file_utils import remote_sync_with_expon_backoff
 from vlm_eval.models import load_vlm
 from vlm_eval.conf.datasets import DatasetConfig, DatasetRegistry
 from scripts.evaluate import EvaluationConfig, evaluate_after_parse
@@ -143,7 +142,7 @@ def main(cfg: EvalRunnerConfig):
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
             aggregated_scores[aggregated_name] = curr_results["summary"]
-            os.mkdir(os.path.join(cfg.results_dir, "aggregated"))
+            os.mkdir(os.path.join(cfg.results_dir, "aggregated"), exist_ok=True)
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
             cmd = f"aws s3 cp {aggregated_path} {aggregated_path_remote}"
