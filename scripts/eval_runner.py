@@ -145,7 +145,7 @@ def main(cfg: EvalRunnerConfig):
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
             aggregated_scores[aggregated_name] = curr_results["summary"]
-            os.mkdirs(os.path.join(cfg.results_dir, "aggregated"))
+            os.mkdir(os.path.join(cfg.results_dir, "aggregated"))
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
             result = remote_sync_with_expon_backoff(
