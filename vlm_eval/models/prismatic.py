@@ -11,9 +11,23 @@ import torch
 import torch.nn as nn
 from accelerate import PartialState
 from PIL.Image import Image
-from prismatic import load
+from prismatic import PrismaticForVision2Seq, PrismaticConfig, PrismaticProcessor
+from prismatic.preprocessing import get_prompt_builder_fn, get_image_processor, get_prismatic_processor
+import json
+from prismatic.models.backbones.llm.openlm import CustomTokenizer
+from transformers import BatchFeature
+from transformers import AutoTokenizer
+from transformers import StoppingCriteria, StoppingCriteriaList
 
 from vlm_eval.util.interfaces import VLM, ImageProcessor, Tokenizer
+
+
+class CustomStopTokensCriteria(StoppingCriteria):
+    def __init__(self, stop_tokens: List[str]) -> None:
+        self.stop_tokens = stop_tokens
+
+    def __call__(self, generated_tokens: torch.Tensor, *args, **kwargs) -> bool:
+        return any(token in self.stop_tokens for token in generated_tokens.flatten())
 
 
 class PrismaticVLM(VLM):
@@ -38,14 +52,25 @@ class PrismaticVLM(VLM):
         self.distributed_state = PartialState()
 
         # Load Model on GPU(s)
-        self.model, self.tokenizer, self.image_processor = self.load()
-
+        self.model = self.load().to(self.distributed_state.device.type, dtype=self.dtype)
+        if self.model.config.llm_family in ["openlm", "openvlm"]:
+            self.tokenizer = CustomTokenizer.from_pretrained(
+                "EleutherAI/gpt-neox-20b", model_max_length=max_length
+            )
+            self.end_tokens = [self.tokenizer.eos_token_id, self.tokenizer.AGENT_STOP]
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+            self.end_tokens = [self.tokenizer.eos_token_id]
+        self.stopping_criteria = StoppingCriteriaList([CustomStopTokensCriteria(self.end_tokens)])
         # Set Default VQA Generation Configuration
         self.max_length = max_length
         self.temperature = temperature
-        self.generate_kwargs = {"do_sample": False, "max_new_tokens": self.max_length, "temperature": self.temperature}
+        self.generate_kwargs = {"do_sample": False, "max_new_tokens": self.max_length, "temperature": self.temperature, "stopping_criteria": self.stopping_criteria}
+    
+    def eval(self):
+        self.model.eval()
 
-    def load(self) -> Tuple[nn.Module, Tokenizer, ImageProcessor]:
+    def load(self) -> Tuple[nn.Module, ImageProcessor]:
         """Load a Prismatic/Quartz Model using the default `prisma.load_pretrained_vlm` initializer."""
 
         if self.run_dir is not None:
@@ -55,19 +80,20 @@ class PrismaticVLM(VLM):
         else:
             raise ValueError("Model Dir and ID cannot both be None")
 
-        # Get Fully Initialized VLM Instance (+ handle `load_precision`)
-        vlm = load(load_from, hf_token=self.hf_token)
-        vlm.to(self.distributed_state.device, dtype=self.dtype)
+        # Get Fully VLM Instance (+ handle `load_precision`)
+        vlm = PrismaticForVision2Seq.from_run_dir(
+            self.run_dir,
+            load_pretrained_backbones=True,
+            map_location=self.distributed_state.device.type,
+        ).to(self.distributed_state.device.type, dtype=self.dtype)
 
-        # Get Tokenizer and Image Processor
-        tokenizer, image_transform = vlm.llm_backbone.tokenizer, vlm.vision_backbone.image_transform
-        return vlm, tokenizer, image_transform
+        return vlm
 
     def set_generate_kwargs(self, generate_kwargs):
         self.generate_kwargs = generate_kwargs
 
     def get_prompt_builder(self, system_prompt: Optional[str] = None) -> Any:
-        return self.model.get_prompt_builder(system_prompt)
+        return get_prompt_builder_fn(self.model.config.llm_family, system_prompt)
 
     def get_prompt_fn(self, dataset_family: str = "vqa-v2") -> Callable[[str], str]:
         vqa_prompt_fn = self.get_vqa_chat_prompt_fn(uncertainty_aware=False)
@@ -100,7 +126,7 @@ class PrismaticVLM(VLM):
 
     def get_captioning_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for captioning tasks."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def captioning_prompt_fn() -> str:
             # Use Default Prompt (same as LLaVa-v1.5)
@@ -116,7 +142,7 @@ class PrismaticVLM(VLM):
 
     def get_vqa_chat_prompt_fn(self, uncertainty_aware: bool = False) -> Callable[[str], str]:
         """Generates the full reference prompt for VQA tasks."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def vqa_prompt_fn(question: str) -> str:
             # Use Default Prompt (same as LLaVa-v1.5)
@@ -142,7 +168,7 @@ class PrismaticVLM(VLM):
 
     def get_true_false_chat_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a True/False captioning task."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def true_false_prompt_fn(caption: str) -> str:
             prompt_builder = prompt_builder_fn()
@@ -158,7 +184,7 @@ class PrismaticVLM(VLM):
 
     def get_contrast_caption_chat_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a multi-pair contrast captioning task (e.g., WinoGround)."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def contrast_caption_prompt_fn(caption: str) -> str:
             # Use Default Prompt (same as LLaVa-v1.5)
@@ -175,7 +201,7 @@ class PrismaticVLM(VLM):
 
     def get_mc_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a multiple choice question-answering task."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def mc_prompt_fn(question: str, choices: List[str]) -> str:
             # Create Choice String
@@ -198,7 +224,7 @@ class PrismaticVLM(VLM):
 
     def get_bbox_refer_chat_prompt_fn(self) -> Callable[[str], str]:
         """Generates the full reference prompt for a referring expression localization task."""
-        prompt_builder_fn = self.model.get_prompt_builder
+        prompt_builder_fn = get_prompt_builder_fn(self.model.config.llm_family)
 
         def bbox_refer_prompt_fn(sentence: str) -> str:
             # Use Default Prompt (same as LLaVa-v1.5)
@@ -221,9 +247,15 @@ class PrismaticVLM(VLM):
         question_prompts: List[str],
         return_string_probabilities: Optional[List[str]] = None,
     ) -> Union[List[str], Tuple[List[str], List[List[float]]]]:
-        return self.model.generate_batch(
-            pixel_values, question_prompts, return_string_probabilities, **self.generate_kwargs
+        text_inputs = self.tokenizer(list(question_prompts), padding=True, return_tensors="pt").to(self.distributed_state.device.type)
+        batch_feature = BatchFeature(data={**text_inputs, "pixel_values": pixel_values.to(self.distributed_state.device.type, dtype=self.dtype)})
+        gen_idx = self.model.generate(
+            **batch_feature, **self.generate_kwargs
         )
+        len_input = text_inputs["input_ids"].shape[1]
+        gen_idx = gen_idx[:, len_input:]
+        gen_texts = self.tokenizer.batch_decode(gen_idx, skip_special_tokens=True)
+        return gen_texts
 
     @torch.inference_mode()
     def generate(

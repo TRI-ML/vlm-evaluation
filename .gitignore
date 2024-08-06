@@ -149,3 +149,7 @@ dmypy.json
 __scratch/
 scratch/
 cache/
+
+# logs and data
+logs/
+data/

@@ -11,14 +11,17 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union, Optional
+import torch
 
 import draccus
 from accelerate.utils import set_seed
+from prismatic.preprocessing import get_image_processor
 
 from vlm_eval.conf import DatasetConfig, DatasetRegistry
 from vlm_eval.models import load_vlm
 from vlm_eval.overwatch import initialize_overwatch
 from vlm_eval.tasks import get_task_runner
+
 
 # Sane Defaults
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -43,6 +46,7 @@ class EvaluationConfig:
         "prism-clip+7b"
     )
     model_dir: Optional[Path] = None                # Path to model checkpoint to load --> should be self-contained
+    image_resize_strategy: str = "letterbox"        # Image Resize Strategy (from `prismatic.preprocessing.image_processors`) #TODO: Should that be here or can we recover it from the model?
 
     # === Model Parameters =>> Official LLaVa ===
     # model_family: str = "llava-v15"
@@ -56,7 +60,7 @@ class EvaluationConfig:
 
     # Inference Parameters
     device_batch_size: int = 1                      # Device Batch Size set to 1 until LLaVa/HF LLaMa fixes bugs!
-    num_workers: int = 2                            # Number of Dataloader Workers (on each process)
+    num_workers: int = 4                            # Number of Dataloader Workers (on each process)
 
     # Artifact Parameters
     results_dir: Path = Path(                       # Path to results directory (writing predicted output, metrics)
@@ -90,6 +94,8 @@ def evaluate(cfg: EvaluationConfig) -> None:
     overwatch.info("Initializing VLM =>> Bundling Models, Image Processors, and Tokenizer")
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
     vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
+    vlm.eval()
+    image_processor = get_image_processor(vlm.model.config.use_fused_vision_backbone, cfg.image_resize_strategy, vlm.model.get_vision_backbone_cfgs())
 
     # Create Task Runner
     overwatch.info(f"Building Evaluation Runner for Dataset `{cfg.dataset.dataset_id}`")
@@ -100,12 +106,13 @@ def evaluate(cfg: EvaluationConfig) -> None:
         task_results_dir,
         cfg.model_id,
         prompt_fn=vlm.get_prompt_fn(cfg.dataset.dataset_family),
-        image_processor=vlm.image_processor,
+        image_processor=image_processor,
     )
 
     # Run Evaluation
     overwatch.info("Starting (Distributed) Evaluation Loop")
-    task_runner.evaluate(vlm, cfg.device_batch_size, cfg.num_workers)
+    with torch.no_grad():
+        task_runner.evaluate(vlm, cfg.device_batch_size, cfg.num_workers)
 
 
 if __name__ == "__main__":
