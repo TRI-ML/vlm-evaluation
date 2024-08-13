@@ -20,16 +20,20 @@ import json
 import argparse
 import draccus
 import torch
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from accelerate.utils import set_seed
 from pathlib import Path
 from typing import Union, Optional
+import uuid
+from datetime import datetime
+import fsspec
 
 from prismatic.util.distributed_utils import world_info_from_env
 from vlm_eval.models import load_vlm
 from vlm_eval.conf.datasets import DatasetConfig, DatasetRegistry
 from scripts.evaluate import EvaluationConfig, evaluate_after_parse
 from scripts.score import ScoreConfig, score_after_parse
+from vlm_eval.conf import FinetuneReferenceConfig
 
 TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full"]
 
@@ -59,6 +63,7 @@ class EvalRunnerConfig:
         "results"
     )
     remote_sync: str = None
+    remote_sync_expdata: str = "s3://tri-ml-datasets/mbm/exp_data"
     remote_sync_frequency: int = 300
 
     # HF Hub Credentials (for LLaMa-2)
@@ -71,9 +76,93 @@ class EvalRunnerConfig:
         self.run_dir = self.model_dir
 
 
+def get_real_name(model_id):
+    fs = fsspec.filesystem('s3')
+    folders_to_check = [
+        "s3://tri-ml-datasets/prismatic/sedrick.keh",
+        "s3://tri-ml-datasets/prismatic/jean.mercat",
+        "s3://tri-ml-datsaets/openlm/mbm_jean"
+    ]
+    for i in folders_to_check:
+        dirlist = fs.listdir(i)
+        dirlist = [f"s3://{j['Key']}" for j in dirlist]
+        curr = f"{i}/{model_id}"
+        if curr in dirlist:
+            curr_full = f"s3://{curr}/config.json"
+            with fs.open(curr_full, 'r') as f:
+                curr_full_data = json.load(f)
+                real_name = curr_full_data['model']['llm_backbone_id']
+                if real_name[-1]=="/":
+                    real_name = real_name[:-1]
+                real_name = f"llava-multimodal+{real_name.rsplit('/', 1)[-1]}+stage-finetune+x7" 
+                return real_name
+    return model_id
+
+
+def prismatic_run_name_to_finetune_config(remote_sync, remote_sync_expdata, model_id):
+    cmd = f"aws s3 cp {remote_sync_expdata}/models/prismatic/{model_id}.json -"
+    print("cmd: ", cmd)
+    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = proc.communicate()
+    if len(stdout) > 0:
+        prismatic_finetune_configs = json.loads(stdout)
+    else:
+        # Check the case where the model was named in a non-default way
+        real_name = get_real_name(model_id)
+        cmd = f"aws s3 cp {remote_sync_expdata}/models/prismatic/{real_name}.json -"
+        print("cmd: ", cmd)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if len(stdout) > 0:
+            prismatic_finetune_configs = json.loads(stdout)
+        else:
+            return False
+
+
+    return asdict(FinetuneReferenceConfig(
+        uuid=prismatic_finetune_configs.get('uuid', None),
+        model=prismatic_finetune_configs.get('model', None),
+        dataset=prismatic_finetune_configs.get('dataset', None),
+        pretrain=prismatic_finetune_configs.get('pretrain', None),
+        stage=prismatic_finetune_configs.get('stage', None),
+        run_id=prismatic_finetune_configs.get('run_id', None)
+    )) 
+
+
+def try_to_find_existing_eval_json(remote_sync, remote_sync_expdata, results_dir, model_id):
+    aggregated_scores = {}
+    if remote_sync_expdata is not None:
+        json_path_remote = os.path.join(remote_sync_expdata, "eval", f"eval_{model_id}.json")
+        cmd = f"aws s3 cp {json_path_remote} -"
+        print("cmd 1: ", cmd)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if len(stdout) > 0:
+            aggregated_scores = json.loads(stdout)
+            if len(aggregated_scores) > 0:
+                return aggregated_scores
+    if remote_sync is not None:
+        aggregated_path_remote = os.path.join(remote_sync, results_dir, "aggregated", f"{model_id}.json")
+        cmd = f"aws s3 cp {aggregated_path_remote} -"
+        print("cmd 2: ", cmd)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = proc.communicate()
+        if len(stdout) > 0:
+            aggregated_scores = json.loads(stdout)
+            if len(aggregated_scores) > 0:
+                return aggregated_scores
+    return aggregated_scores
+
+
 @draccus.wrap()
 def main(cfg: EvalRunnerConfig):
     assert cfg.model_id is not None and cfg.model_dir is not None
+    if cfg.remote_sync is not None:
+        if cfg.remote_sync[-1] == "/":
+            cfg.remote_sync = cfg.remote_sync[:-1]
+    if cfg.remote_sync_expdata is not None:
+        if cfg.remote_sync_expdata[-1] == "/":
+            cfg.remote_sync_expdata = cfg.remote_sync_expdata[:-1]
 
     # Parse tasks
     datasets = []
@@ -93,16 +182,21 @@ def main(cfg: EvalRunnerConfig):
     vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
 
     # Get existing scores
-    aggregated_scores = {}
+    aggregated_scores = try_to_find_existing_eval_json(cfg.remote_sync, cfg.remote_sync_expdata, cfg.results_dir, cfg.model_id)
+    print("aggregated scores: ", aggregated_scores)
     aggregated_path = os.path.join(cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
-    aggregated_path_remote = os.path.join(cfg.remote_sync, cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
-    cmd = f"aws s3 cp {aggregated_path_remote} -"
-    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = proc.communicate()
-    if len(stdout) > 0:
-        aggregated_scores = json.loads(stdout)
-    else:
-        aggregated_scores = {"model": cfg.model_id}
+    if cfg.remote_sync is not None:
+        aggregated_path_remote = os.path.join(cfg.remote_sync, cfg.results_dir, "aggregated", f"{cfg.model_id}.json")
+    _, global_rank, _ = world_info_from_env()
+    if global_rank == 0:
+        os.makedirs(os.path.join(cfg.results_dir, "aggregated"), exist_ok=True)
+        aggregated_scores["name"] = aggregated_scores.get("name", cfg.model_id)
+        aggregated_scores["uuid"] = aggregated_scores.get("uuid", str(uuid.uuid4()))
+        aggregated_scores["creation_date"] = aggregated_scores.get("creation_date", datetime.now().strftime("%Y_%m_%d-%H_%M_%S"))
+    torch.distributed.barrier()
+    aggregated_scores["finetune"] = aggregated_scores.get("finetune", prismatic_run_name_to_finetune_config(cfg.remote_sync, cfg.remote_sync_expdata, cfg.model_id))
+    assert aggregated_scores["finetune"] is not None
+    torch.distributed.barrier()
 
     for dataset in datasets:
         task_name_full = dataset.dataset_id
@@ -142,7 +236,6 @@ def main(cfg: EvalRunnerConfig):
             stdout, stderr = proc.communicate()
             curr_results = json.loads(stdout)
             aggregated_scores[aggregated_name] = curr_results["summary"]
-            os.makedirs(os.path.join(cfg.results_dir, "aggregated"), exist_ok=True)
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
             cmd = f"aws s3 cp {aggregated_path} {aggregated_path_remote}"
@@ -150,6 +243,23 @@ def main(cfg: EvalRunnerConfig):
             print("aggregate remote sync finished.")
 
         torch.distributed.barrier()
+
+    # Sync to exp_data
+    _, global_rank, _ = world_info_from_env()
+    if global_rank == 0 and cfg.remote_sync is not None:
+        with open(aggregated_path, 'w') as f:
+            json.dump(aggregated_scores, f, indent=4)
+        cmd = f"aws s3 cp {aggregated_path} {aggregated_path_remote}"
+        print("aggregate remote sync cmd:", cmd)
+        proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("aggregate remote sync finished.")
+            
+        cfg.remote_sync_expdata = cfg.remote_sync_expdata[:-1] if cfg.remote_sync_expdata[-1]=="/" else cfg.remote_sync_expdata
+        cmd = f"aws s3 cp {aggregated_path_remote} {cfg.remote_sync_expdata}/eval/eval_{cfg.model_id}.json"
+        print("final sync cmd: ", cmd)
+        proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("final sync finished.")
+    torch.distributed.barrier()
 
 
 if __name__=="__main__":
