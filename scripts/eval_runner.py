@@ -29,11 +29,13 @@ from datetime import datetime
 import fsspec
 
 from prismatic.util.distributed_utils import world_info_from_env
+from prismatic.util.file_utils import llm_backbone_id_to_mbm_configs
 from vlm_eval.models import load_vlm
 from vlm_eval.conf.datasets import DatasetConfig, DatasetRegistry
 from scripts.evaluate import EvaluationConfig, evaluate_after_parse
 from scripts.score import ScoreConfig, score_after_parse
 from vlm_eval.conf import FinetuneReferenceConfig
+from prismatic.conf import PretrainReferenceConfig
 
 TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full"]
 
@@ -98,6 +100,24 @@ def get_real_name(model_id):
                 return real_name
     return model_id
 
+
+def prismatic_run_name_to_pretrain_config(remote_sync, remote_sync_expdata, model_id):
+    mbm_configs = llm_backbone_id_to_mbm_configs(model_id)
+    return asdict(PretrainReferenceConfig(
+        name=mbm_configs['name'],
+        dataset_name=mbm_configs['dataset_name'],
+        dataset_uuid=mbm_configs['dataset_uuid'],
+        hyperparameters=mbm_configs['hyperparameters'],
+        checkpoint_url=mbm_configs['checkpoint_url'],
+        results=mbm_configs['results'],
+        params_url=mbm_configs['params_url'],
+        uuid=mbm_configs['uuid'],
+        creation_date=mbm_configs['creation_date'],
+        failed=mbm_configs['failed'],
+        error=mbm_configs['error'],
+        dataset_weights=mbm_configs['dataset_weights']
+    )) 
+    
 
 def prismatic_run_name_to_finetune_config(remote_sync, remote_sync_expdata, model_id):
     cmd = f"aws s3 cp {remote_sync_expdata}/models/prismatic/{model_id}.json -"
@@ -194,8 +214,13 @@ def main(cfg: EvalRunnerConfig):
         aggregated_scores["uuid"] = aggregated_scores.get("uuid", str(uuid.uuid4()))
         aggregated_scores["creation_date"] = aggregated_scores.get("creation_date", datetime.now().strftime("%Y_%m_%d-%H_%M_%S"))
     torch.distributed.barrier()
-    aggregated_scores["finetune"] = aggregated_scores.get("finetune", prismatic_run_name_to_finetune_config(cfg.remote_sync, cfg.remote_sync_expdata, cfg.model_id))
-    assert aggregated_scores["finetune"] is not None
+
+    if cfg.model_dir.startswith("(open"):
+        aggregated_scores["pretrain"] = aggregated_scores.get("pretrain", prismatic_run_name_to_pretrain_config(cfg.remote_sync, cfg.remote_sync_expdata, cfg.model_id))
+        assert aggregated_scores["pretrain"] is not None
+    else:
+        aggregated_scores["finetune"] = aggregated_scores.get("finetune", prismatic_run_name_to_finetune_config(cfg.remote_sync, cfg.remote_sync_expdata, cfg.model_id))
+        assert aggregated_scores["finetune"] is not None
     torch.distributed.barrier()
 
     for dataset in datasets:
