@@ -115,7 +115,8 @@ def prismatic_run_name_to_pretrain_config(remote_sync, remote_sync_expdata, mode
         creation_date=mbm_configs['creation_date'],
         failed=mbm_configs['failed'],
         error=mbm_configs['error'],
-        dataset_weights=mbm_configs['dataset_weights']
+        dataset_weights=mbm_configs['dataset_weights'],
+        openlm_text_pretrained=mbm_configs['openlm_text_pretrained']
     )) 
     
 
