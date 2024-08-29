@@ -22,7 +22,7 @@ import draccus
 import requests
 import torch
 import uvicorn
-from accelerate.utils import set_seed
+from vlm_eval.util import set_seed
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import StreamingResponse
 from llava.constants import WORKER_HEART_BEAT_INTERVAL

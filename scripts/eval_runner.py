@@ -21,7 +21,7 @@ import argparse
 import draccus
 import torch
 from dataclasses import dataclass, field, asdict
-from accelerate.utils import set_seed
+from vlm_eval.util import set_seed
 from pathlib import Path
 from typing import Union, Optional
 import uuid
@@ -116,7 +116,7 @@ def prismatic_run_name_to_pretrain_config(remote_sync, remote_sync_expdata, mode
         failed=mbm_configs['failed'],
         error=mbm_configs['error'],
         dataset_weights=mbm_configs['dataset_weights'],
-        openlm_text_pretrained=mbm_configs['openlm_text_pretrained']
+        openlm_text_pretrained=mbm_configs.get('openlm_text_pretrained', None),
     )) 
     
 

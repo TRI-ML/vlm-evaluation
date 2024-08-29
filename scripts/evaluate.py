@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Union, Optional
 
 import draccus
-from accelerate.utils import set_seed
+from vlm_eval.util import set_seed
 
 from vlm_eval.conf import DatasetConfig, DatasetRegistry
 from vlm_eval.models import load_vlm

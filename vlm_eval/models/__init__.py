@@ -4,11 +4,11 @@ from typing import Optional
 from vlm_eval.util.interfaces import VLM
 
 from .instructblip import InstructBLIP
-from .llava import LLaVa
+# from .llava import LLaVa
 from .prismatic import PrismaticVLM
 
 # === Initializer Dispatch by Family ===
-FAMILY2INITIALIZER = {"instruct-blip": InstructBLIP, "llava-v15": LLaVa, "prismatic": PrismaticVLM}
+FAMILY2INITIALIZER = {"instruct-blip": InstructBLIP, "prismatic": PrismaticVLM}
 
 
 def load_vlm(
