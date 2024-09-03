@@ -18,10 +18,10 @@ from pathlib import Path
 from tabulate import tabulate
 
 
-TASK_LIST=["vqa-v2_vqa-v2-full", "vqa-v2_vqa-v2-slim", "gqa_gqa-full", "vizwiz_vizwiz-full", "text-vqa_text-vqa-full", "refcoco_refcoco-full", "ocid-ref_ocid-ref-full"]
+TASK_LIST=["vqa-v2_vqa-v2-full", "gqa_gqa-full", "vizwiz_vizwiz-full", "text-vqa_text-vqa-full", "refcoco_refcoco-full", "ocid-ref_ocid-ref-full", "pope-full_experiments", ]
 
 METRICS_TO_AVERAGE_OVER = ["accuracy__TextVQA-OCR", "accuracy__TextVQA-Pure", "accuracy", "accuracy__VizWiz-Overall", "accuracy__RefCOCO", "accuracy__RefCOCOg",
-                            "accuracy__OCIDRef-All"]
+                            "accuracy__OCIDRef-All", ]
 
 def is_metric(key):
   return re.match(r'^accuracy__', key) or \
@@ -56,7 +56,7 @@ def main(cfg: AnalyzeEvalsConfig):
 
   filepath2results = {} # dict mapping filepaths to results to update results later with normalized z score.
 
-g  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
+  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
     with open(filepath, 'r') as file:
       results_json = json.load(file)
       filepath2results[filepath] = results_json
@@ -130,7 +130,8 @@ g  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
                       runid2zscores[run_id] = {"filepath": filepath}
 
                 runid2zscores[run_id][f'{task}-{key}-zscore'] =  results_json[task][f"{key}-z_score"]
-    
+                runid2zscores[run_id][f'{task}-{key}'] =  results_json[task][f"{key}"]
+
     if len(aggregated_z_scores) > 0:
       aggregated_z_score = sum(aggregated_z_scores)/len(aggregated_z_scores)
 
@@ -149,6 +150,6 @@ g  for filepath in glob.glob(os.path.join(cfg.results_dir, cfg.pattern)):
   df = df.sort_values(by=['aggregated-z_score'], ascending=False).sort_index(axis=1)
 
   print(tabulate(df[['aggregated-z_score']], headers='keys', tablefmt='fancy_grid'))
-  
+  df.to_csv(os.path.join(cfg.results_dir, "compiled_results.csv"))
 if __name__=="__main__":
     main()
