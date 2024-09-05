@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Union
 
 import draccus
 import yaml
+import time
 
 from vlm_eval.conf import DatasetConfig, DatasetRegistry
 from vlm_eval.overwatch import initialize_overwatch
@@ -114,7 +115,17 @@ def score_after_parse(cfg):
         questions_file=root_dir / cfg.dataset.questions_file if cfg.dataset.questions_file is not None else None,
         split=cfg.dataset.split,
     )
-    summary_scores = scorer.score(cfg.model_id)
+    num_retry = 3
+    for i in range(num_retry):
+        try:
+            summary_scores = scorer.score(cfg.model_id)
+            break
+        except Exception as e:
+            if i < num_retry - 1:
+                overwatch.warning(f"Error in scoring: {e}; retrying...")
+                time.sleep(5)
+            else:
+                overwatch.warning(f"#!# Error in scoring: {e}; skiping... #!#")
 
     # Open Model Config =>> `config.yaml`
     if cfg.config_yaml is not None:

@@ -252,8 +252,9 @@ def main(cfg: EvalRunnerConfig):
 
             local_results_path = os.path.join(cfg.results_dir, task_name_short, task_name_full, cfg.model_id)
             s3_results_path = os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id)
-            cmd = f"aws s3 cp {local_results_path} {s3_results_path} --recursive"
-            proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if local_results_path != s3_results_path:
+                cmd = f"aws s3 cp {local_results_path} {s3_results_path} --recursive"
+                proc = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print(f"{task_name_short} remote sync finished.")
             
             # Updated aggregated scores
