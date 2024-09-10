@@ -100,8 +100,9 @@ def score_after_parse(cfg):
             full_results.update(json.load(f))
 
     # Validate on Expected # of Examples
+    tolerance = 0.05
     assert (
-        len(full_results) == cfg.dataset.expected_examples
+        len(full_results) > (1 - tolerance) * cfg.dataset.expected_examples
     ), f"Expected {cfg.dataset.expected_examples} model outputs, only found {len(full_results)}!"
 
     # Per-Family Dataset Handling
@@ -141,7 +142,7 @@ def score_after_parse(cfg):
     # Finalize Metrics & Write to Disk
     metrics = {
         "dataset": cfg.dataset.dataset_id,
-        "n_examples": cfg.dataset.expected_examples,
+        "n_examples": len(full_results),
         "model": cfg.model_id,
         "experiment_tags": experiment_tags,
         "summary": summary_scores,

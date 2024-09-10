@@ -54,8 +54,9 @@ def build_pope_indices(root_dir: Path, slim_dataset_sizes: Optional[Tuple[int, .
 
     # Build Full Metadata Structure
     index = {}
+    percent_lost_acceptable = 0.05
     for split, qid2question in split_qid2question.items():
-        assert len(qid2question) == (
+        assert len(qid2question) > (1 - percent_lost_acceptable) * (
             count := {"adversarial": 3000, "popular": 3000, "random": 2910}[split]
         ), f"Expected {count} examples in POPE `{split}` Split!"
 

@@ -27,6 +27,7 @@ from typing import Union, Optional
 import uuid
 from datetime import datetime
 import fsspec
+import time
 
 from prismatic.util.distributed_utils import world_info_from_env
 from prismatic.util.file_utils import llm_backbone_id_to_mbm_configs
@@ -37,7 +38,7 @@ from scripts.score import ScoreConfig, score_after_parse
 from vlm_eval.conf import FinetuneReferenceConfig
 from prismatic.conf import PretrainReferenceConfig
 
-TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full"]
+TASK_LIST=["vqa-v2-full", "vqa-v2-slim", "gqa-full", "vizwiz-full", "text-vqa-full", "refcoco-full", "ocid-ref-full", "pope-full"]
 
 @dataclass
 class EvalRunnerConfig:
@@ -258,10 +259,20 @@ def main(cfg: EvalRunnerConfig):
             print(f"{task_name_short} remote sync finished.")
             
             # Updated aggregated scores
-            cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, 'metrics.json')} -"
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = proc.communicate()
-            curr_results = json.loads(stdout)
+            retries = 3
+            while retries > 0:
+                try:
+                    cmd = f"aws s3 cp {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, 'metrics.json')} -"
+                    proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    stdout, stderr = proc.communicate()
+                    curr_results = json.loads(stdout)
+                    break
+                except:
+                    retries -= 1
+                    time.sleep(5)
+                    if retries == 0:
+                        curr_results = {"summary": f"FAILED, could not load {os.path.join(cfg.remote_sync, cfg.results_dir, task_name_short, task_name_full, cfg.model_id, 'metrics.json')}"}
+
             aggregated_scores[aggregated_name] = curr_results["summary"]
             with open(aggregated_path, 'w') as f:
                 json.dump(aggregated_scores, f, indent=4)
