@@ -74,9 +74,7 @@ class EvaluationConfig:
 
     # fmt: on
 
-
-@draccus.wrap()
-def evaluate(cfg: EvaluationConfig) -> None:
+def evaluate_after_parse(cfg, vlm=None):
     overwatch.info(f"Starting Evaluation for Dataset `{cfg.dataset.dataset_id}` w/ Model `{cfg.model_id}`")
     set_seed(cfg.seed)
 
@@ -89,7 +87,8 @@ def evaluate(cfg: EvaluationConfig) -> None:
     # Build the VLM --> Download/Load Pretrained Model from Checkpoint
     overwatch.info("Initializing VLM =>> Bundling Models, Image Processors, and Tokenizer")
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
-    vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
+    if vlm is None:
+        vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
 
     # Create Task Runner
     overwatch.info(f"Building Evaluation Runner for Dataset `{cfg.dataset.dataset_id}`")
@@ -106,6 +105,11 @@ def evaluate(cfg: EvaluationConfig) -> None:
     # Run Evaluation
     overwatch.info("Starting (Distributed) Evaluation Loop")
     task_runner.evaluate(vlm, cfg.device_batch_size, cfg.num_workers)
+
+
+@draccus.wrap()
+def evaluate(cfg: EvaluationConfig) -> None:
+    evaluate_after_parse(cfg)
 
 
 if __name__ == "__main__":
