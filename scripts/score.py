@@ -9,6 +9,7 @@ split --> as an example, using the official GQA `eval.py` or VQAv2 leaderboard s
 Run from the repository root:
     => python scripts/score.py < args >
 """
+import os
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -54,16 +55,26 @@ class ScoreConfig:
         "results"
     )
 
+    score_only_s3_dir: str = None                   # Used if doing only scoring and not evaluating
     # fmt: on
 
 
 def score_after_parse(cfg):
     overwatch.info(f"Starting Official Scoring for Dataset `{cfg.dataset.dataset_id}` => Model `{cfg.model_id}`")
 
+    if cfg.score_only_s3_dir is not None:
+        noslash = cfg.score_only_s3_dir[:-1] if cfg.score_only_s3_dir.endswith('/') else cfg.score_only_s3_dir
+        curr_dir = f"{noslash}/{cfg.dataset.dataset_family}/{cfg.dataset.dataset_id}/{cfg.model_id}"
+        target_dir = cfg.results_dir / cfg.dataset.dataset_family / cfg.dataset.dataset_id / cfg.model_id
+        print('curr_dir: ', curr_dir)
+        print('target_dir: ', target_dir)
+        os.system(f"aws s3 cp --recursive {curr_dir} {target_dir}")
+
     # Short-Circuit (if results/metrics already exist)
     dataset_family, dataset_id = cfg.dataset.dataset_family, cfg.dataset.dataset_id
     task_results_dir = cfg.results_dir / cfg.dataset.dataset_family / cfg.dataset.dataset_id / cfg.model_id
-    if (metrics_json := task_results_dir / "metrics.json").exists():
+    # If rerunning scoring, skip this block
+    if (metrics_json := task_results_dir / "metrics.json").exists() and cfg.score_only_s3_dir is None:
         overwatch.info(f"Metrics JSON already exists at `{metrics_json}` =>> Exiting!")
         with open(metrics_json, "r") as f:
             metrics = json.load(f)

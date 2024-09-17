@@ -75,6 +75,10 @@ class EvalRunnerConfig:
     # Randomness
     seed: int = 21                                  # Random Seed (for reproducibility)
 
+    # Scoring
+    score_only: bool = False                        # Assume generation is done and only do scoring
+    score_only_s3_dir: str = None
+
     def __post_init__(self) -> None:
         self.run_dir = self.model_dir
 
@@ -179,6 +183,8 @@ def try_to_find_existing_eval_json(remote_sync, remote_sync_expdata, results_dir
 @draccus.wrap()
 def main(cfg: EvalRunnerConfig):
     assert cfg.model_id is not None and cfg.model_dir is not None
+    if cfg.score_only:
+        assert cfg.score_only_s3_dir is not None
     if cfg.remote_sync is not None:
         if cfg.remote_sync[-1] == "/":
             cfg.remote_sync = cfg.remote_sync[:-1]
@@ -200,8 +206,8 @@ def main(cfg: EvalRunnerConfig):
     cfg.run_dir = cfg.model_dir
     set_seed(cfg.seed)
     hf_token = cfg.hf_token.read_text().strip() if isinstance(cfg.hf_token, Path) else os.environ[cfg.hf_token]
-
-    vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
+    if not cfg.score_only:
+        vlm = load_vlm(cfg.model_family, cfg.model_id, cfg.run_dir, hf_token=hf_token, ocr=cfg.dataset.ocr)
 
     # Get existing scores
     aggregated_scores = try_to_find_existing_eval_json(cfg.remote_sync, cfg.remote_sync_expdata, cfg.results_dir, cfg.model_id)
@@ -230,22 +236,29 @@ def main(cfg: EvalRunnerConfig):
         task_name_short = task_name_full[:-5]
         aggregated_name = f"{task_name_short}_{task_name_full}"
         if aggregated_name in aggregated_scores:
-            print(f"{aggregated_name} in {aggregated_path}! Skipping.")
-            continue
+            if "FAILED" in aggregated_scores[aggregated_name]:
+                pass
+            else:
+                print(f"{aggregated_name} in {aggregated_path}! Skipping.")
+                continue
 
         cfg.dataset = dataset
         cfg.dataset.root_dir = Path(cfg.dataset_dir)
         print(f"Now evaluating: {dataset.dataset_id}")
-        evaluate_after_parse(cfg=cfg, vlm=vlm)
+        if not cfg.score_only:
+            evaluate_after_parse(cfg=cfg, vlm=vlm)
 
-        sc = ScoreConfig()
-        sc.dataset = dataset
-        sc.dataset.root_dir = Path(cfg.dataset_dir)
-        sc.model_id = cfg.model_id
-        print(f"Now scoring: {dataset.dataset_id}")
-        score_after_parse(cfg=sc)
-
+        torch.distributed.barrier()
         _, global_rank, _ = world_info_from_env()
+        if global_rank == 0:
+            sc = ScoreConfig()
+            sc.dataset = dataset
+            sc.dataset.root_dir = Path(cfg.dataset_dir)
+            sc.model_id = cfg.model_id
+            sc.score_only_s3_dir = cfg.score_only_s3_dir
+            print(f"Now scoring: {dataset.dataset_id}")
+            score_after_parse(cfg=sc)
+
         if global_rank == 0 and cfg.remote_sync is not None:
             print(f"Syncing results to {os.path.join(cfg.remote_sync, cfg.results_dir)}:")
             task_name_full = dataset.dataset_id
